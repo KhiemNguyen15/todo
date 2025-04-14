@@ -14,6 +14,6 @@ pub fn get_data_path() -> std::path::PathBuf {
 pub fn remove_data_dir() {
     if let Some(proj_dirs) = ProjectDirs::from("", "KhiemNguyen15", "todo") {
         let data_dir = proj_dirs.data_local_dir();
-        std::fs::remove_dir_all(data_dir).unwrap();
+        return std::fs::remove_dir_all(data_dir).unwrap();
     }
 }

@@ -26,7 +26,7 @@ enum Commands {
     /// Mark a task as done
     Done {
         #[arg(help = "The task ID to mark as done")]
-        id: i32,
+        idx: usize,
     },
     /// Remove all tasks marked as done
     Clean,
@@ -40,18 +40,26 @@ fn main() {
     let conn = init_db(&db_path).expect("Failed to initialize database");
 
     match cli.command {
-        Commands::Add { task } => {
-            add_task(&conn, &task).expect("Failed to add task");
-        }
-        Commands::List => {
-            list_tasks(&conn).expect("Failed to list tasks");
-        }
-        Commands::Done { id } => {
-            mark_done(&conn, id).expect("Failed to mark task as done");
-        }
-        Commands::Clean => {
-            clear_tasks(&conn).expect("Failed to clear completed tasks");
-        }
+        Commands::Add { task } => match add_task(&conn, &task) {
+            Ok(_) => println!("Added task: {}", task),
+            Err(e) => println!("Failed to add task: {}", e),
+        },
+
+        Commands::List => match list_tasks(&conn) {
+            Ok(_) => (),
+            Err(e) => println!("Failed to list tasks: {}", e),
+        },
+
+        Commands::Done { idx } => match mark_done(&conn, idx) {
+            Ok(_) => println!("Marked task #{} as done", idx),
+            Err(e) => println!("Failed to mark task as done: {}", e),
+        },
+
+        Commands::Clean => match clear_tasks(&conn) {
+            Ok(_) => println!("Cleared completed tasks"),
+            Err(e) => println!("Failed to clear completed tasks: {}", e),
+        },
+
         Commands::Reset => {
             remove_data_dir();
         }
