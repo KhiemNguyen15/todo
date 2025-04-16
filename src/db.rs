@@ -69,6 +69,22 @@ pub fn mark_done(conn: &Connection, idx: usize) -> Result<()> {
     }
 }
 
+pub fn remove_task(conn: &Connection, idx: usize) -> Result<()> {
+    let mut stmt = conn.prepare("SELECT id FROM todo ORDER BY id LIMIT 1 OFFSET ?1")?;
+
+    let mut rows = stmt.query(params![idx as i64])?;
+
+    if let Some(row) = rows.next()? {
+        let id: i32 = row.get(0)?;
+
+        conn.execute("DELETE FROM todo WHERE id = ?1", params![id])?;
+
+        Ok(())
+    } else {
+        Err(rusqlite::Error::QueryReturnedNoRows)
+    }
+}
+
 pub fn clear_tasks(conn: &Connection) -> Result<()> {
     conn.execute("DELETE FROM todo WHERE done = 1", [])?;
     Ok(())

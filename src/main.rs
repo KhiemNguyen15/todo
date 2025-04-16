@@ -17,12 +17,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Add a new todo item
+    /// Add a new task
     Add {
         #[arg(help = "The task description")]
         task: String,
     },
-    /// List all todo items
+    /// List all tasks
     List {
         /// Output format: "table" (default) or "json"
         #[arg(short, long, default_value = "table")]
@@ -31,7 +31,12 @@ enum Commands {
     /// Mark a task as done
     Done {
         #[arg(help = "The task ID to mark as done")]
-        idx: usize,
+        id: usize,
+    },
+    /// Remove a task
+    Remove {
+        #[arg(help = "The task ID to remove")]
+        id: usize,
     },
     /// Remove all tasks marked as done
     Clean,
@@ -83,15 +88,27 @@ fn main() {
             Err(e) => println!("Failed to list tasks: {}", e),
         },
 
-        Commands::Done { idx } => {
-            if idx == 0 {
-                println!("Invalid task index");
+        Commands::Done { id } => {
+            if id == 0 {
+                println!("Invalid task ID");
                 return;
             }
 
-            match mark_done(&conn, idx - 1) {
-                Ok(_) => println!("Marked task #{} as done", idx),
-                Err(_) => println!("Task #{} not found", idx),
+            match mark_done(&conn, id - 1) {
+                Ok(_) => println!("Marked task #{} as done", id),
+                Err(_) => println!("Task #{} not found", id),
+            }
+        }
+
+        Commands::Remove { id } => {
+            if id == 0 {
+                println!("Invalid task ID");
+                return;
+            }
+
+            match remove_task(&conn, id - 1) {
+                Ok(_) => println!("Removed task #{}", id),
+                Err(_) => println!("Task #{} not found", id),
             }
         }
 
