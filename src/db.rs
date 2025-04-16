@@ -8,6 +8,7 @@ pub struct Task {
     pub idx: i32,
     pub task: String,
     pub done: bool,
+    pub due: Option<String>,
 }
 
 pub fn init_db(db_path: &PathBuf) -> Result<Connection> {
@@ -17,7 +18,8 @@ pub fn init_db(db_path: &PathBuf) -> Result<Connection> {
         "CREATE TABLE IF NOT EXISTS todo (
             id INTEGER PRIMARY KEY AUTOINCREMENT, 
             task TEXT NOT NULL,
-            done INTEGER NOT NULL
+            done INTEGER NOT NULL,
+            due TEXT
         )",
         [],
     )?;
@@ -25,30 +27,36 @@ pub fn init_db(db_path: &PathBuf) -> Result<Connection> {
     Ok(conn)
 }
 
-pub fn add_task(conn: &Connection, task: &str) -> Result<()> {
+pub fn add_task(conn: &Connection, task: &str, due: Option<&str>) -> Result<()> {
     conn.execute(
-        "INSERT INTO todo (task, done) VALUES (?1, 0)",
-        params![task],
+        "INSERT INTO todo (task, done, due) VALUES (?1, 0, ?2)",
+        params![task, due],
     )?;
     Ok(())
 }
 
 pub fn get_tasks(conn: &Connection) -> Result<Vec<Task>> {
-    let mut stmt = conn.prepare("SELECT id, task, done FROM todo")?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get::<_, String>(1)?, row.get::<_, bool>(2)?))
+    let mut stmt = conn.prepare("SELECT task, done, due FROM todo")?;
+
+    let row_iter = stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>("task")?,
+            row.get::<_, bool>("done")?,
+            row.get::<_, Option<String>>("due")?,
+        ))
     })?;
 
-    let results = rows
+    let results = row_iter
         .enumerate()
         .map(|(i, row_result)| {
-            row_result.map(|(task, done)| Task {
+            row_result.map(|(task, done, due)| Task {
                 idx: (i + 1) as i32,
-                task: task,
-                done: done,
+                task,
+                done,
+                due,
             })
         })
-        .collect::<Result<Vec<Task>, _>>()?;
+        .collect::<Result<Vec<Task>>>()?;
 
     Ok(results)
 }

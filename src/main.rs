@@ -1,6 +1,7 @@
 mod config;
 mod db;
 
+use chrono::NaiveDate;
 use config::*;
 use db::*;
 
@@ -20,6 +21,9 @@ enum Commands {
     Add {
         #[arg(help = "The task description")]
         task: String,
+
+        #[arg(long, help = "Due date (YYYY-MM-DD")]
+        due: Option<String>,
     },
     /// List all tasks
     List {
@@ -55,23 +59,33 @@ fn main() {
     let conn = init_db(&db_path).expect("Failed to initialize database");
 
     match cli.command {
-        Commands::Add { task } => match add_task(&conn, &task) {
-            Ok(_) => println!("Added task: {}", task),
-            Err(e) => println!("Failed to add task: {}", e),
-        },
+        Commands::Add { task, due } => {
+            if let Some(ref d) = due {
+                if NaiveDate::parse_from_str(d, "%Y-%m-%d").is_err() {
+                    println!("Invalid due date format. Use YYYY-MM-DD.");
+                    return;
+                }
+            }
+
+            match add_task(&conn, &task, due.as_deref()) {
+                Ok(_) => println!("Added task: {}", task),
+                Err(e) => println!("Failed to add task: {}", e),
+            }
+        }
 
         Commands::List { format } => match get_tasks(&conn) {
             Ok(tasks) => match format {
                 OutputFormat::Table => {
                     let mut table = Table::new();
 
-                    table.add_row(row!["#", "Task", "Done"]);
+                    table.add_row(row!["#", "Task", "Done", "Due Date"]);
 
                     for task in tasks {
                         table.add_row(row![
                             task.idx,
                             task.task,
-                            if task.done { " ✓✓" } else { " " }
+                            if task.done { " ✓✓" } else { " " },
+                            task.due.as_deref().unwrap_or(" "),
                         ]);
                     }
 
