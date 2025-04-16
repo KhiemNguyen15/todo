@@ -8,8 +8,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use prettytable::{Table, row};
 
 #[derive(Parser)]
-#[command(name = "todo")]
-#[command(about = "A simple CLI todo app", long_about = None)]
+#[command(name = "todo", version, about = "A simple CLI todo app")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
