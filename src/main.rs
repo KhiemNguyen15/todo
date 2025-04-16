@@ -4,7 +4,8 @@ mod db;
 use config::*;
 use db::*;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use prettytable::{Table, row};
 
 #[derive(Parser)]
 #[command(name = "todo")]
@@ -22,7 +23,11 @@ enum Commands {
         task: String,
     },
     /// List all todo items
-    List,
+    List {
+        /// Output format: "table" (default) or "json"
+        #[arg(short, long, default_value = "table")]
+        format: OutputFormat,
+    },
     /// Mark a task as done
     Done {
         #[arg(help = "The task ID to mark as done")]
@@ -32,6 +37,12 @@ enum Commands {
     Clean,
     /// Remove the data directory
     Reset,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, ValueEnum)]
+pub enum OutputFormat {
+    Table,
+    Json,
 }
 
 fn main() {
@@ -45,15 +56,44 @@ fn main() {
             Err(e) => println!("Failed to add task: {}", e),
         },
 
-        Commands::List => match list_tasks(&conn) {
-            Ok(_) => (),
+        Commands::List { format } => match get_tasks(&conn) {
+            Ok(tasks) => match format {
+                OutputFormat::Table => {
+                    let mut table = Table::new();
+
+                    table.add_row(row!["#", "Task", "Done"]);
+
+                    for task in tasks {
+                        table.add_row(row![
+                            task.idx,
+                            task.task,
+                            if task.done { " ✓✓" } else { " " }
+                        ]);
+                    }
+
+                    table.printstd();
+                }
+                OutputFormat::Json => {
+                    let json =
+                        serde_json::to_string_pretty(&tasks).expect("Failed to serialize tasks");
+
+                    println!("{}", json);
+                }
+            },
             Err(e) => println!("Failed to list tasks: {}", e),
         },
 
-        Commands::Done { idx } => match mark_done(&conn, idx) {
-            Ok(_) => println!("Marked task #{} as done", idx),
-            Err(e) => println!("Failed to mark task as done: {}", e),
-        },
+        Commands::Done { idx } => {
+            if idx == 0 {
+                println!("Invalid task index");
+                return;
+            }
+
+            match mark_done(&conn, idx - 1) {
+                Ok(_) => println!("Marked task #{} as done", idx),
+                Err(_) => println!("Task #{} not found", idx),
+            }
+        }
 
         Commands::Clean => match clear_tasks(&conn) {
             Ok(_) => println!("Cleared completed tasks"),

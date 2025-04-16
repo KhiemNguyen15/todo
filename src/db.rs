@@ -1,6 +1,14 @@
 use std::path::PathBuf;
 
 use rusqlite::{Connection, Result, params};
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct Task {
+    pub idx: i32,
+    pub task: String,
+    pub done: bool,
+}
 
 pub fn init_db(db_path: &PathBuf) -> Result<Connection> {
     let conn = Connection::open(db_path)?;
@@ -25,19 +33,24 @@ pub fn add_task(conn: &Connection, task: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn list_tasks(conn: &Connection) -> Result<()> {
+pub fn get_tasks(conn: &Connection) -> Result<Vec<Task>> {
     let mut stmt = conn.prepare("SELECT id, task, done FROM todo")?;
     let rows = stmt.query_map([], |row| {
         Ok((row.get::<_, String>(1)?, row.get::<_, bool>(2)?))
     })?;
 
-    for (i, row) in rows.enumerate() {
-        let (task, done) = row?;
-        let status = if done { "✓" } else { " " };
-        println!("[{}] {} - {}", i + 1, status, task);
-    }
+    let results = rows
+        .enumerate()
+        .map(|(i, row_result)| {
+            row_result.map(|(task, done)| Task {
+                idx: (i + 1) as i32,
+                task: task,
+                done: done,
+            })
+        })
+        .collect::<Result<Vec<Task>, _>>()?;
 
-    Ok(())
+    Ok(results)
 }
 
 pub fn mark_done(conn: &Connection, idx: usize) -> Result<()> {
