@@ -22,7 +22,7 @@ enum Commands {
         #[arg(help = "The task description")]
         task: String,
 
-        #[arg(long, help = "Due date (YYYY-MM-DD or YYYY-MM-DD HH:MM")]
+        #[arg(long, help = "Due date (YYYY-MM-DD or YYYY-MM-DD HH:MM)")]
         due: Option<String>,
     },
     /// List all tasks
