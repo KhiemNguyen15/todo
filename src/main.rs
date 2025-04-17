@@ -1,10 +1,10 @@
 mod config;
 mod db;
 
-use chrono::NaiveDate;
 use config::*;
 use db::*;
 
+use chrono::{NaiveDate, NaiveDateTime};
 use clap::{Parser, Subcommand, ValueEnum};
 use prettytable::{Table, row};
 
@@ -22,7 +22,7 @@ enum Commands {
         #[arg(help = "The task description")]
         task: String,
 
-        #[arg(long, help = "Due date (YYYY-MM-DD")]
+        #[arg(long, help = "Due date (YYYY-MM-DD or YYYY-MM-DD HH:MM")]
         due: Option<String>,
     },
     /// List all tasks
@@ -60,14 +60,18 @@ fn main() {
 
     match cli.command {
         Commands::Add { task, due } => {
-            if let Some(ref d) = due {
-                if NaiveDate::parse_from_str(d, "%Y-%m-%d").is_err() {
-                    println!("Invalid due date format. Use YYYY-MM-DD.");
-                    return;
-                }
-            }
+            let formatted_due = match due {
+                Some(ref d) => match parse_due(d) {
+                    Some(validated) => Some(validated),
+                    None => {
+                        println!("Invalid due date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM.");
+                        return;
+                    }
+                },
+                None => None,
+            };
 
-            match add_task(&conn, &task, due.as_deref()) {
+            match add_task(&conn, &task, formatted_due.as_deref()) {
                 Ok(_) => println!("Added task: {}", task),
                 Err(e) => println!("Failed to add task: {}", e),
             }
@@ -134,4 +138,16 @@ fn main() {
             remove_data_dir();
         }
     }
+}
+
+fn parse_due(due: &str) -> Option<String> {
+    if let Ok(date_time) = NaiveDateTime::parse_from_str(due, "%Y-%m-%d %H:%M") {
+        return Some(date_time.format("%Y-%m-%d %H:%M").to_string());
+    }
+
+    if let Ok(date) = NaiveDate::parse_from_str(due, "%Y-%m-%d") {
+        return Some(date.format("%Y-%m-%d").to_string());
+    }
+
+    None
 }
