@@ -6,6 +6,7 @@ authors = ["KhiemNguyen15"]
 description = "A simple CLI todo app"
 
 [dependencies]
+chrono = { version = "0.4.40", features = ["serde"] }
 clap = { version = "4.5.36", features = ["derive"] }
 directories = "6.0.0"
 prettytable = "0.10.0"
