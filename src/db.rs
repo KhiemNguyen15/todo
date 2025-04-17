@@ -36,7 +36,10 @@ pub fn add_task(conn: &Connection, task: &str, due: Option<&str>) -> Result<()> 
 }
 
 pub fn get_tasks(conn: &Connection) -> Result<Vec<Task>> {
-    let mut stmt = conn.prepare("SELECT task, done, due FROM todo")?;
+    let mut stmt = conn.prepare(
+        "SELECT task, done, due FROM todo 
+            ORDER BY due IS NULL, datetime(due)",
+    )?;
 
     let row_iter = stmt.query_map([], |row| {
         Ok((
@@ -62,7 +65,11 @@ pub fn get_tasks(conn: &Connection) -> Result<Vec<Task>> {
 }
 
 pub fn mark_done(conn: &Connection, idx: usize) -> Result<()> {
-    let mut stmt = conn.prepare("SELECT id FROM todo ORDER BY id LIMIT 1 OFFSET ?1")?;
+    let mut stmt = conn.prepare(
+        "SELECT id FROM todo 
+            ORDER BY due IS NULL, datetime(due) 
+            LIMIT 1 OFFSET ?1",
+    )?;
 
     let mut rows = stmt.query(params![idx as i64])?;
 
@@ -78,7 +85,11 @@ pub fn mark_done(conn: &Connection, idx: usize) -> Result<()> {
 }
 
 pub fn remove_task(conn: &Connection, idx: usize) -> Result<()> {
-    let mut stmt = conn.prepare("SELECT id FROM todo ORDER BY id LIMIT 1 OFFSET ?1")?;
+    let mut stmt = conn.prepare(
+        "SELECT id FROM todo 
+            ORDER BY due IS NULL, datetime(due) 
+            LIMIT 1 OFFSET ?1",
+    )?;
 
     let mut rows = stmt.query(params![idx as i64])?;
 
