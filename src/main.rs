@@ -55,6 +55,8 @@ pub enum OutputFormat {
 
 fn main() {
     let cli = Cli::parse();
+    let config = load_config();
+
     let db_path = get_data_path();
     let conn = init_db(&db_path).expect("Failed to initialize database");
 
@@ -80,18 +82,8 @@ fn main() {
         Commands::List { format } => match get_tasks(&conn) {
             Ok(tasks) => match format {
                 OutputFormat::Table => {
-                    let mut table = Table::new();
-
-                    table.add_row(row!["#", "Task", "Done", "Due Date"]);
-
-                    for task in tasks {
-                        table.add_row(row![
-                            task.idx,
-                            task.task,
-                            if task.done { " ✓✓" } else { " " },
-                            task.due.as_deref().unwrap_or(" "),
-                        ]);
-                    }
+                    let table =
+                        get_pretty_table(&tasks, &config.time_format.unwrap_or(TimeFormat::H24));
 
                     table.printstd();
                 }
@@ -138,6 +130,37 @@ fn main() {
             remove_data_dir();
         }
     }
+}
+
+fn format_due_date(due_opt: &Option<String>, time_format: &TimeFormat) -> String {
+    match due_opt {
+        Some(due_str) => match NaiveDateTime::parse_from_str(due_str, "%Y-%m-%d %H:%M") {
+            Ok(dt) => match time_format {
+                TimeFormat::H24 => dt.format("%Y-%m-%d %H:%M").to_string(),
+                TimeFormat::H12 => dt.format("%m/%d/%Y %I:%M %p").to_string(),
+            },
+            Err(_) => due_str.clone(),
+        },
+        None => " ".to_string(),
+    }
+}
+
+fn get_pretty_table(tasks: &[Task], time_format: &TimeFormat) -> Table {
+    let mut table = Table::new();
+    table.add_row(row!["#", "Task", "Done", "Due Date"]);
+
+    for task in tasks {
+        let due_str = format_due_date(&task.due, time_format);
+
+        table.add_row(row![
+            task.idx,
+            task.task,
+            if task.done { " ✓✓" } else { " " },
+            due_str,
+        ]);
+    }
+
+    table
 }
 
 fn parse_due(due: &str) -> Option<String> {
