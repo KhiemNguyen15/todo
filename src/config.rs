@@ -58,6 +58,8 @@ pub fn get_data_path() -> path::PathBuf {
 pub fn remove_data_dir() {
     if let Some(proj_dirs) = ProjectDirs::from("", "KhiemNguyen15", "todo") {
         let data_dir = proj_dirs.data_local_dir();
-        return fs::remove_dir_all(data_dir).unwrap();
+        if let Err(e) = fs::remove_dir_all(data_dir) {
+            eprintln!("Warning: Failed to remove data directory: {}", e);
+        }
     }
 }

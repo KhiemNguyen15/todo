@@ -75,7 +75,7 @@ fn main() {
 
             match add_task(&conn, &task, formatted_due.as_deref()) {
                 Ok(_) => println!("Added task: {}", task),
-                Err(e) => println!("Failed to add task: {}", e),
+                Err(e) => eprintln!("Failed to add task: {}", e),
             }
         }
 
@@ -94,7 +94,7 @@ fn main() {
                     println!("{}", json);
                 }
             },
-            Err(e) => println!("Failed to list tasks: {}", e),
+            Err(e) => eprintln!("Failed to list tasks: {}", e),
         },
 
         Commands::Done { id } => {
@@ -105,7 +105,7 @@ fn main() {
 
             match mark_done(&conn, id - 1) {
                 Ok(_) => println!("Marked task #{} as done", id),
-                Err(_) => println!("Task #{} not found", id),
+                Err(_) => eprintln!("Task #{} not found", id),
             }
         }
 
@@ -117,13 +117,13 @@ fn main() {
 
             match remove_task(&conn, id - 1) {
                 Ok(_) => println!("Removed task #{}", id),
-                Err(_) => println!("Task #{} not found", id),
+                Err(_) => eprintln!("Task #{} not found", id),
             }
         }
 
         Commands::Clean => match clear_tasks(&conn) {
             Ok(_) => println!("Cleared completed tasks"),
-            Err(e) => println!("Failed to clear completed tasks: {}", e),
+            Err(e) => eprintln!("Failed to clear completed tasks: {}", e),
         },
 
         Commands::Reset => {
