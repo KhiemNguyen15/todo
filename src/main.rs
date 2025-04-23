@@ -132,15 +132,23 @@ fn main() {
     }
 }
 
-fn format_due_date(due_opt: &Option<String>, time_format: &TimeFormat) -> String {
+fn format_due_date(due_opt: Option<&str>, time_format: &TimeFormat) -> String {
     match due_opt {
-        Some(due_str) => match NaiveDateTime::parse_from_str(due_str, "%Y-%m-%d %H:%M") {
-            Ok(dt) => match time_format {
-                TimeFormat::H24 => dt.format("%Y-%m-%d %H:%M").to_string(),
-                TimeFormat::H12 => dt.format("%m/%d/%Y %I:%M %p").to_string(),
-            },
-            Err(_) => due_str.clone(),
-        },
+        Some(due_str) => {
+            if let Ok(dt) = NaiveDateTime::parse_from_str(due_str, "%Y-%m-%d %H:%M") {
+                match time_format {
+                    TimeFormat::H24 => dt.format("%Y-%m-%d %H:%M").to_string(),
+                    TimeFormat::H12 => dt.format("%m/%d/%Y %I:%M %p").to_string(),
+                }
+            } else if let Ok(date) = NaiveDate::parse_from_str(due_str, "%Y-%m-%d") {
+                match time_format {
+                    TimeFormat::H24 => date.format("%Y-%m-%d").to_string(),
+                    TimeFormat::H12 => date.format("%m/%d/%Y").to_string(),
+                }
+            } else {
+                due_str.to_string()
+            }
+        }
         None => " ".to_string(),
     }
 }
@@ -150,7 +158,7 @@ fn get_pretty_table(tasks: &[Task], time_format: &TimeFormat) -> Table {
     table.add_row(row!["#", "Task", "Done", "Due Date"]);
 
     for task in tasks {
-        let due_str = format_due_date(&task.due, time_format);
+        let due_str = format_due_date(task.due.as_deref(), time_format);
 
         table.add_row(row![
             task.idx,
